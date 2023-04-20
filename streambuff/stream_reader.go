@@ -46,7 +46,7 @@ func (c *StreamReader) Reset() {
 }
 
 // 清空缓存，并将 buffer 返还给 bufferPool
-func (c *StreamReader) Close() (err error) {
+func (c *StreamReader) Clean() (err error) {
 	r, ok := c.reader.(io.ReadCloser)
 	if ok {
 		err = r.Close()
@@ -69,7 +69,7 @@ func (c *StreamReader) Read(p []byte) (int, error) {
 			if errors.Is(err, io.EOF) {
 				c.hasEOF = true
 			} else {
-				return int(n), err
+				return int(n), errors.Join(err, ErrRead)
 			}
 		}
 	}

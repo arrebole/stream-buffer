@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"math/rand"
+	"net/http"
 	"testing"
 	"time"
 
@@ -50,7 +51,7 @@ func TestStreamReader(t *testing.T) {
 		data = append(data, buffer[0:n]...)
 	}
 
-	reader.Close()
+	reader.Clean()
 	assert.Equal(t, data, origin)
 }
 
@@ -64,7 +65,7 @@ func TestStreamReaderByReadAll(t *testing.T) {
 	data, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Close()
+	reader.Clean()
 	assert.Equal(t, data, origin)
 }
 
@@ -82,7 +83,7 @@ func TestStreamReaderReset(t *testing.T) {
 	data2, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Close()
+	reader.Clean()
 	assert.Equal(t, origin, data1)
 	assert.Equal(t, origin, data2)
 }
@@ -117,7 +118,7 @@ func TestStreamReaderCombin(t *testing.T) {
 	data2, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Close()
+	reader.Clean()
 	assert.Equal(t, origin, append(data1, data2...))
 }
 
@@ -147,8 +148,32 @@ func TestStreamReaderBreak(t *testing.T) {
 	data, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Close()
+	reader.Clean()
 	assert.Equal(t, origin, data)
+}
+
+type MockReader struct{}
+
+func (p *MockReader) Read(bytes []byte) (int, error) {
+	return 0, errors.New("fail")
+}
+func TestStreamReaderError(t *testing.T) {
+	reader := NewStreamReader(
+		&MockReader{},
+	)
+
+	_, err := io.ReadAll(reader)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrRead)
+
+	reader.Reset()
+	_, err = http.DefaultClient.Post(
+		"https://github.com",
+		"plain/text",
+		reader,
+	)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrRead)
 }
 
 func BenchmarkStreamReaderReadAll(b *testing.B) {
@@ -163,7 +188,7 @@ func BenchmarkStreamReaderReadAll(b *testing.B) {
 		data, err := io.ReadAll(reader)
 		assert.NoError(b, err)
 
-		reader.Close()
+		reader.Clean()
 		assert.Equal(b, origin, data)
 	}
 }
@@ -195,7 +220,7 @@ func BenchmarkStreamReaderRead(b *testing.B) {
 			assert.Equal(b, buffer[0:n], origin[len(data):len(data)+n])
 			data = append(data, buffer[0:n]...)
 		}
-		reader.Close()
+		reader.Clean()
 		assert.Equal(b, data, origin)
 	}
 }
