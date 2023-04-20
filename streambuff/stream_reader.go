@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"sync/atomic"
+	"sync"
 )
 
 // 带有缓存的高级 Reader
@@ -23,19 +23,27 @@ type StreamReader struct {
 	reader io.Reader
 }
 
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return &bytes.Buffer{}
+	},
+}
+
 func NewStreamReader(reader io.Reader) *StreamReader {
+	buf := bufferPool.Get().(*bytes.Buffer)
 	return &StreamReader{
-		buf:    &bytes.Buffer{},
+		buf:    buf,
 		reader: reader,
 	}
 }
 
 func (c *StreamReader) Reset() {
-	atomic.SwapInt64(&c.offset, 0)
+	c.offset = 0
 }
 
-func (c *StreamReader) CachedSize() int64 {
-	return int64(len(c.buf.Bytes()))
+func (c *StreamReader) Clear() {
+	c.buf.Reset()
+	bufferPool.Put(c.buf)
 }
 
 func (c *StreamReader) Read(p []byte) (int, error) {
@@ -43,37 +51,27 @@ func (c *StreamReader) Read(p []byte) (int, error) {
 	requireSize := c.offset + int64(len(p))
 
 	// 还需要从源文件读取的长度
-	needMoreSize := requireSize - c.CachedSize()
+	needMoreSize := requireSize - int64(c.buf.Len())
 
 	// 内容还需要从源 reader 读取，并且文件还没有读取完毕，则继续从reader读取
 	if needMoreSize > 0 && !c.hasEOF {
-		n, err := c.reader.Read(p)
-		if n > 0 {
-			c.buf.Write(p[0:n])
-		}
+		n, err := io.CopyN(c.buf, c.reader, int64(len(p)))
 		if err != nil && errors.Is(err, io.EOF) {
 			c.hasEOF = true
 		}
 		if err != nil && !errors.Is(err, io.EOF) {
-			return n, err
+			return int(n), err
 		}
 	}
 
 	// 如果已经读取完毕，继续读取，则返回eof错误
-	if c.hasEOF && c.offset >= c.CachedSize() {
+	if c.offset >= int64(c.buf.Len()) {
 		return 0, io.EOF
 	}
 
-	size := 0
-	// 如果未读取完毕，则返回需要读取的内容
-	// - 需要读取的长度大于源文件的长度
-	// - 需要读取的长度小于源文件的长度
-	if requireSize > c.CachedSize() {
-		size = copy(p, c.buf.Bytes()[c.offset:])
-		atomic.SwapInt64(&c.offset, c.CachedSize())
-	} else {
-		size = copy(p, c.buf.Bytes()[c.offset:requireSize])
-		atomic.AddInt64(&c.offset, int64(size))
-	}
+	// 将需要的数据拷贝到
+	size := copy(p, c.buf.Bytes()[c.offset:])
+	c.offset += int64(size)
+
 	return size, nil
 }

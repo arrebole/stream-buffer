@@ -19,6 +19,7 @@ func sample() {
 	reader.Reset()
 	data2, err := io.ReadAll(reader)
 	
+	reader.Clear()
 	// data1 == data2 == origin
 }
 
@@ -49,6 +50,7 @@ func sample() {
 		data = append(data, buffer[0:n]...)
 	}
 
+	reader.Clear()
 	// data == origon
 }
 ```
