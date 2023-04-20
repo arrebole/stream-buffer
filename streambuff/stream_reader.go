@@ -30,6 +30,9 @@ var bufferPool = sync.Pool{
 }
 
 func NewStreamReader(reader io.Reader) *StreamReader {
+	if reader == nil {
+		panic("reader must not nil")
+	}
 	buf := bufferPool.Get().(*bytes.Buffer)
 	return &StreamReader{
 		buf:    buf,
@@ -43,9 +46,15 @@ func (c *StreamReader) Reset() {
 }
 
 // 清空缓存，并将 buffer 返还给 bufferPool
-func (c *StreamReader) Close() {
+func (c *StreamReader) Close() (err error) {
+	r, ok := c.reader.(io.ReadCloser)
+	if ok {
+		err = r.Close()
+	}
+
 	c.buf.Reset()
 	bufferPool.Put(c.buf)
+	return
 }
 
 func (c *StreamReader) Read(p []byte) (int, error) {
