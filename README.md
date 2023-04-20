@@ -2,8 +2,10 @@
 ## stream-buffer
 
 带有缓存的高级 Reader, 只会在第一次 read 的时候从源 reader 调用 read()
-读取过的数据会被缓存下来，之后的重试操作可以使用缓存中的数据，通过 Reset() 重置读取进度, Reset() 不会清除已经缓存的内容
+读取过的数据会被缓存下来，之后的重试操作可以使用缓存中的数据
 
+- 通过 Reset() 重置读取进度, Reset() 不会清除已经缓存的内容
+- 通过 Close() 关闭 Reader, Close() 会清理已经缓存到的内容
 ### 使用方法
 
 ```golang
@@ -19,7 +21,7 @@ func sample() {
 	reader.Reset()
 	data2, err := io.ReadAll(reader)
 	
-	reader.Clear()
+	reader.Close()
 	// data1 == data2 == origin
 }
 
@@ -50,7 +52,7 @@ func sample() {
 		data = append(data, buffer[0:n]...)
 	}
 
-	reader.Clear()
+	reader.Close()
 	// data == origon
 }
 ```

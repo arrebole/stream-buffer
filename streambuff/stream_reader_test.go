@@ -50,7 +50,7 @@ func TestStreamReader(t *testing.T) {
 		data = append(data, buffer[0:n]...)
 	}
 
-	reader.Clear()
+	reader.Close()
 	assert.Equal(t, data, origin)
 }
 
@@ -64,7 +64,7 @@ func TestStreamReaderByReadAll(t *testing.T) {
 	data, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Clear()
+	reader.Close()
 	assert.Equal(t, data, origin)
 }
 
@@ -82,7 +82,7 @@ func TestStreamReaderReset(t *testing.T) {
 	data2, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Clear()
+	reader.Close()
 	assert.Equal(t, origin, data1)
 	assert.Equal(t, origin, data2)
 }
@@ -117,7 +117,7 @@ func TestStreamReaderCombin(t *testing.T) {
 	data2, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Clear()
+	reader.Close()
 	assert.Equal(t, origin, append(data1, data2...))
 }
 
@@ -147,7 +147,7 @@ func TestStreamReaderBreak(t *testing.T) {
 	data, err := io.ReadAll(reader)
 	assert.NoError(t, err)
 
-	reader.Clear()
+	reader.Close()
 	assert.Equal(t, origin, data)
 }
 
@@ -163,7 +163,7 @@ func BenchmarkStreamReaderReadAll(b *testing.B) {
 		data, err := io.ReadAll(reader)
 		assert.NoError(b, err)
 
-		reader.Clear()
+		reader.Close()
 		assert.Equal(b, origin, data)
 	}
 }
@@ -195,7 +195,7 @@ func BenchmarkStreamReaderRead(b *testing.B) {
 			assert.Equal(b, buffer[0:n], origin[len(data):len(data)+n])
 			data = append(data, buffer[0:n]...)
 		}
-		reader.Clear()
+		reader.Close()
 		assert.Equal(b, data, origin)
 	}
 }

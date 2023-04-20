@@ -37,11 +37,13 @@ func NewStreamReader(reader io.Reader) *StreamReader {
 	}
 }
 
+// 重置读取偏移量为0， 但是不会清空已经缓存的内容，未缓存的内容需要被读取时，继续从源 reader 中读取
 func (c *StreamReader) Reset() {
 	c.offset = 0
 }
 
-func (c *StreamReader) Clear() {
+// 清空缓存，并将 buffer 返还给 bufferPool
+func (c *StreamReader) Close() {
 	c.buf.Reset()
 	bufferPool.Put(c.buf)
 }
