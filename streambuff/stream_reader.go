@@ -17,7 +17,7 @@ type StreamReader struct {
 	hasEOF bool
 
 	// 对外读取到的偏移量
-	offset int64
+	offset int
 
 	// 源数据读取器的 bufio 包装
 	reader io.Reader
@@ -49,31 +49,30 @@ func (c *StreamReader) Close() {
 }
 
 func (c *StreamReader) Read(p []byte) (int, error) {
-	// 此次 Read 需要的字节长度
-	requireSize := c.offset + int64(len(p))
 
 	// 还需要从源文件读取的长度
-	needMoreSize := requireSize - int64(c.buf.Len())
+	needMoreSize := c.offset + len(p) - c.buf.Len()
 
 	// 内容还需要从源 reader 读取，并且文件还没有读取完毕，则继续从reader读取
 	if needMoreSize > 0 && !c.hasEOF {
 		n, err := io.CopyN(c.buf, c.reader, int64(len(p)))
-		if err != nil && errors.Is(err, io.EOF) {
-			c.hasEOF = true
-		}
-		if err != nil && !errors.Is(err, io.EOF) {
-			return int(n), err
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				c.hasEOF = true
+			} else {
+				return int(n), err
+			}
 		}
 	}
 
 	// 如果已经读取完毕，继续读取，则返回eof错误
-	if c.offset >= int64(c.buf.Len()) {
+	if c.offset >= c.buf.Len() {
 		return 0, io.EOF
 	}
 
 	// 将需要的数据拷贝到
 	size := copy(p, c.buf.Bytes()[c.offset:])
-	c.offset += int64(size)
+	c.offset += size
 
 	return size, nil
 }
