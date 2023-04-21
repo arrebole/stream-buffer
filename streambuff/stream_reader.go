@@ -2,9 +2,11 @@ package streambuff
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"io"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 // 带有缓存的高级 Reader
@@ -64,12 +66,12 @@ func (c *StreamReader) Read(p []byte) (int, error) {
 
 	// 内容还需要从源 reader 读取，并且文件还没有读取完毕，则继续从reader读取
 	if needMoreSize > 0 && !c.hasEOF {
-		n, err := io.CopyN(c.buf, c.reader, int64(len(p)))
+		n, err := io.CopyN(c.buf, c.reader, int64(needMoreSize))
 		if err != nil {
-			if errors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 				c.hasEOF = true
 			} else {
-				return int(n), errors.Join(err, ErrRead)
+				return int(n), fmt.Errorf("%w; Second error", err)
 			}
 		}
 	}
