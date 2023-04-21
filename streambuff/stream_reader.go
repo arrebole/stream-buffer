@@ -2,11 +2,9 @@ package streambuff
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // 带有缓存的高级 Reader
@@ -71,7 +69,7 @@ func (c *StreamReader) Read(p []byte) (int, error) {
 			if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 				c.hasEOF = true
 			} else {
-				return int(n), fmt.Errorf("%w; Second error", err)
+				return int(n), errors.Join(err, ErrRead)
 			}
 		}
 	}
