@@ -76,16 +76,15 @@ func TestStreamReaderReset(t *testing.T) {
 		bytes.NewReader(origin),
 	)
 
-	data1, err := io.ReadAll(reader)
-	assert.NoError(t, err)
-
-	reader.Reset()
-	data2, err := io.ReadAll(reader)
-	assert.NoError(t, err)
+	for i := 0; i < 10; i++ {
+		reader.Reset()
+		data, err := io.ReadAll(reader)
+		// fmt.Println(string(origin), string(data))
+		assert.NoError(t, err)
+		assert.Equal(t, origin, data)
+	}
 
 	reader.Clean()
-	assert.Equal(t, origin, data1)
-	assert.Equal(t, origin, data2)
 }
 
 // 测试使用 io.ReadAll 和 Read 组合读取
