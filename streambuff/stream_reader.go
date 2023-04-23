@@ -63,7 +63,7 @@ func (c *StreamReader) Reset() error {
 
 // 清空缓存，并将 buffer 返还给 bufferPool
 func (c *StreamReader) Clean() (err error) {
-	if r, ok := c.reader.(io.ReadCloser); ok {
+	if r, ok := c.originReader.(io.ReadCloser); ok {
 		err = r.Close()
 	}
 
